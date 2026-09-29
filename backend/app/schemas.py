@@ -1,6 +1,155 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import date, datetime
+
+# ---------------------------------------------------------------------------
+# 品种身份
+# ---------------------------------------------------------------------------
+
+class SpeciesIdentity(BaseModel):
+    """列表、周期分析、追溯共用的统一身份视图。"""
+    code: Optional[str] = None
+    current_name: Optional[str] = None
+    canonical_name: Optional[str] = None
+    aliases: List[str] = []
+    historical_names: List[str] = []
+    pending: bool = False
+    pending_mapping_count: Optional[int] = None
+    status: Optional[str] = None
+    mapping_id: Optional[int] = None
+    candidates: List[Dict[str, Any]] = []
+
+class SpeciesCreate(BaseModel):
+    name: str
+    code: Optional[str] = None
+    scientific_name: Optional[str] = None
+    description: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesUpdate(BaseModel):
+    scientific_name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+class SpeciesRename(BaseModel):
+    new_name: str
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesResponse(BaseModel):
+    id: int
+    code: str
+    current_name: str
+    scientific_name: Optional[str] = None
+    description: Optional[str] = None
+    status: str
+    aliases: List[str] = []
+    historical_names: List[str] = []
+    pending_mapping_count: int = 0
+    identity: Optional[SpeciesIdentity] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class SpeciesNameResponse(BaseModel):
+    id: int
+    species_id: int
+    name: str
+    name_type: str
+    status: str
+    note: Optional[str] = None
+    actor: Optional[str] = None
+    created_at: datetime
+    decided_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class AliasPropose(BaseModel):
+    alias: str
+    note: Optional[str] = None
+    actor: Optional[str] = None
+
+class AliasDecision(BaseModel):
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesMappingResponse(BaseModel):
+    id: int
+    raw_text: str
+    normalized_key: str
+    candidate_species_id: Optional[int] = None
+    candidate_code: Optional[str] = None
+    candidate_name: Optional[str] = None
+    target_species_id: Optional[int] = None
+    target_code: Optional[str] = None
+    confidence: str
+    status: str
+    source: str
+    occurrence_count: int
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+    created_at: datetime
+    decided_at: Optional[datetime] = None
+
+class MappingApprove(BaseModel):
+    target_species_id: int
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class MappingDecision(BaseModel):
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesSplitRequest(BaseModel):
+    new_species_name: str
+    move_aliases: List[str]
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesMergeRequest(BaseModel):
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+
+class SpeciesEventResponse(BaseModel):
+    id: int
+    species_id: int
+    event_type: str
+    from_value: Optional[str] = None
+    to_value: Optional[str] = None
+    related_species_id: Optional[int] = None
+    mapping_id: Optional[int] = None
+    reason: Optional[str] = None
+    actor: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class SuggestResponse(BaseModel):
+    input: str
+    match: Optional[Dict[str, Any]] = None
+    candidates: List[Dict[str, Any]] = []
+
+class SpeciesOverviewItem(BaseModel):
+    code: Optional[str] = None
+    current_name: str
+    status: str
+    aliases: List[str] = []
+    historical_names: List[str] = []
+    batch_count: int = 0
+    pond_count: int = 0
+    stocking_quantity: int = 0
+    occurrence_count: Optional[int] = None
+
+class EntryResolveResult(BaseModel):
+    """创建业务记录时返回的身份解析结果（同时附在响应头式字段里）。"""
+    status: str
+    species_code: Optional[str] = None
+    mapping_id: Optional[int] = None
+    candidates: List[Dict[str, Any]] = []
 
 class PondBase(BaseModel):
     name: str
@@ -21,11 +170,13 @@ class PondUpdate(BaseModel):
 
 class PondResponse(PondBase):
     id: int
+    species_code: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class BatchBase(BaseModel):
     batch_number: str
@@ -50,11 +201,13 @@ class BatchUpdate(BaseModel):
 
 class BatchResponse(BatchBase):
     id: int
+    species_code: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class StockingRecordBase(BaseModel):
     batch_id: int
@@ -81,10 +234,12 @@ class StockingRecordUpdate(BaseModel):
 
 class StockingRecordResponse(StockingRecordBase):
     id: int
+    species_code: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class FeedingRecordBase(BaseModel):
     batch_id: int
@@ -114,7 +269,7 @@ class FeedingRecordResponse(FeedingRecordBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class WaterQualityRecordBase(BaseModel):
     batch_id: int
@@ -148,7 +303,7 @@ class WaterQualityRecordResponse(WaterQualityRecordBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class MedicationRecordBase(BaseModel):
     batch_id: int
@@ -184,7 +339,7 @@ class MedicationRecordResponse(MedicationRecordBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CostRecordBase(BaseModel):
     batch_id: int
@@ -216,7 +371,7 @@ class CostRecordResponse(CostRecordBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class HarvestSaleBase(BaseModel):
     batch_id: int
@@ -248,7 +403,7 @@ class HarvestSaleResponse(HarvestSaleBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CostSummaryItem(BaseModel):
     type: str
@@ -263,6 +418,9 @@ class CultureCycleAnalysis(BaseModel):
     batch_number: str
     pond_name: str
     species: str
+    species_code: Optional[str] = None
+    recorded_species_name: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
     stocking_date: date
     harvest_date: Optional[date] = None
     days_cultured: Optional[int] = None
@@ -278,9 +436,19 @@ class CultureCycleAnalysis(BaseModel):
     profit: float
     cost_summary: Optional[dict] = None
     feeding_summary: Optional[dict] = None
+    signed: Optional[bool] = None
+    signed_at: Optional[datetime] = None
+    signer: Optional[str] = None
+    signed_species_name: Optional[str] = None
+
+class SignCycleRequest(BaseModel):
+    signer: Optional[str] = None
 
 class StockingRecordTrace(BaseModel):
     species: str
+    species_code: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
+    recorded_species_name: Optional[str] = None
     quantity: int
     source: Optional[str] = None
     batch_number: Optional[str] = None
@@ -320,6 +488,9 @@ class HarvestSaleTrace(BaseModel):
 class BatchInfo(BaseModel):
     batch_number: str
     species: str
+    species_code: Optional[str] = None
+    species_identity: Optional[SpeciesIdentity] = None
+    recorded_species_name: Optional[str] = None
     stocking_date: date
     harvest_date: Optional[date] = None
     status: str

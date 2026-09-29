@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import ponds, batches, stocking, feeding, water_quality, medication, costs, harvest, analysis
+from .migrations import run_lightweight_migrations
+from .routers import ponds, batches, stocking, feeding, water_quality, medication, costs, harvest, analysis, species
 
 Base.metadata.create_all(bind=engine)
+run_lightweight_migrations(engine)
 
 app = FastAPI(
     title="水产养殖管理系统",
@@ -28,6 +30,7 @@ app.include_router(medication.router)
 app.include_router(costs.router)
 app.include_router(harvest.router)
 app.include_router(analysis.router)
+app.include_router(species.router)
 
 @app.get("/")
 def root():
